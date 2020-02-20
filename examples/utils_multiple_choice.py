@@ -200,6 +200,57 @@ class SwagProcessor(DataProcessor):
         return examples
 
 
+class SocialProcessor(DataProcessor):
+    """Processor for the Social data set."""
+
+    def get_train_examples(self, data_dir):
+        """See base class."""
+        logger.info("LOOKING AT {} train".format(data_dir))
+        return self._create_examples(self._read_csv(os.path.join(data_dir, "train.csv")), "train")
+
+    def get_dev_examples(self, data_dir):
+        """See base class."""
+        logger.info("LOOKING AT {} dev".format(data_dir))
+        return self._create_examples(self._read_csv(os.path.join(data_dir, "val.csv")), "dev")
+
+    def get_test_examples(self, data_dir):
+        """See base class."""
+        logger.info("LOOKING AT {} dev".format(data_dir))
+        raise ValueError(
+            "For socialqa testing, the input file does not contain a label column. It can not be tested in current code"
+            "setting!"
+        )
+        return self._create_examples(self._read_csv(os.path.join(data_dir, "test.csv")), "test")
+
+    def get_labels(self):
+        """See base class."""
+        return ["1", "2", "3"]
+
+    def _read_csv(self, input_file):
+        with open(input_file, "r", encoding="utf-8") as f:
+            return list(csv.reader(f))
+
+    def _create_examples(self, lines: List[List[str]], type: str):
+        """Creates examples for the training and dev sets."""
+        if type == "train" and lines[0][-1] != "label":
+            raise ValueError("For training, the input file must contain a label column.")
+
+        examples = [
+            InputExample(
+                example_id=line[0],
+                question=line[2],  # in the swag dataset, the
+                # common beginning of each
+                # choice is stored in "sent2".
+                contexts=[line[1], line[1], line[1]],
+                endings=[line[3], line[4], line[5]],
+                label=line[6],
+            )
+            for line in lines[1:]  # we skip the line with the column names
+        ]
+
+        return examples
+
+
 class ArcProcessor(DataProcessor):
     """Processor for the ARC data set (request from allennlp)."""
 
@@ -367,7 +418,7 @@ def convert_examples_to_features(
     return features
 
 
-processors = {"race": RaceProcessor, "swag": SwagProcessor, "arc": ArcProcessor}
+processors = {"race": RaceProcessor, "swag": SwagProcessor, "social": SocialProcessor, "arc": ArcProcessor}
 
 
-MULTIPLE_CHOICE_TASKS_NUM_LABELS = {"race", 4, "swag", 4, "arc", 4}
+MULTIPLE_CHOICE_TASKS_NUM_LABELS = {"race", 4, "swag", 4, "social", 3, "arc", 4}
